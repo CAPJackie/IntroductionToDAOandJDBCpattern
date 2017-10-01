@@ -34,12 +34,13 @@ public class JDBCExample {
     
     public static void main(String args[]){
         try {
-            String url="jdbc:mysql://HOST:3306/BD";
+            String url="jdbc:mysql://desarrollo.is.escuelaing.edu.co:3306/bdprueba";
             String driver="com.mysql.jdbc.Driver";
-            String user="USER";
-            String pwd="PWD";
-                        
+            String user="bdprueba";
+            String pwd="bdprueba";
+
             Class.forName(driver);
+
             Connection con=DriverManager.getConnection(url,user,pwd);
             con.setAutoCommit(false);
                  
@@ -57,8 +58,8 @@ public class JDBCExample {
             System.out.println("-----------------------");
             
             
-            int suCodigoECI=20134423;
-            registrarNuevoProducto(con, suCodigoECI, "SU NOMBRE", 99999999);            
+            int suCodigoECI = 2110805;
+            registrarNuevoProducto(con, suCodigoECI, "Juan David Ramirez Mendoza", 99999999);            
             con.commit();
                         
             
@@ -83,9 +84,44 @@ public class JDBCExample {
         //Crear preparedStatement
         //Asignar parámetros
         //usar 'execute'
-
         
-        con.commit();
+        PreparedStatement preparedStatement = null;
+        
+        String insertNewProduct = "INSERT INTO ORD_PRODUCTOS" + 
+                "(codigo, nombre, precio) VALUES" +
+                "(?,?,?)";
+        
+        try{
+            con.setAutoCommit(false);
+            preparedStatement = con.prepareStatement(insertNewProduct);
+            preparedStatement.setInt(1, codigo);
+            preparedStatement.setString(2, nombre);
+            preparedStatement.setInt(3, precio);
+            preparedStatement.executeUpdate();
+            con.commit();
+        }catch(SQLException e){
+            String selectProduct = "SELECT codigo, nombre, precio "
+                                              + "FROM ORD_PRODUCTOS "
+                                              + "WHERE codigo = ?";
+                
+                preparedStatement = con.prepareStatement(selectProduct);
+                preparedStatement.setInt(1, codigo);
+                ResultSet rs = preparedStatement.executeQuery();
+                
+                rs.next();
+                
+                System.out.println("Codigo "+rs.getInt("codigo")+"\nNombre: "+rs.getString("nombre")+"\nPrecio: "+rs.getInt("precio"));
+        } finally{
+            if(preparedStatement != null){
+                preparedStatement.close();
+            }
+            
+            if(con != null){
+                preparedStatement.close();
+            }
+            
+        
+        }
         
     }
     
@@ -95,14 +131,49 @@ public class JDBCExample {
      * @param codigoPedido el código del pedido
      * @return 
      */
-    public static List<String> nombresProductosPedido(Connection con, int codigoPedido){
+    public static List<String> nombresProductosPedido(Connection con, int codigoPedido) throws SQLException{
         List<String> np=new LinkedList<>();
+        
         
         //Crear prepared statement
         //asignar parámetros
         //usar executeQuery
         //Sacar resultados del ResultSet
         //Llenar la lista y retornarla
+        
+        PreparedStatement preparedStatement = null;
+        
+        String selectNameFromProducts = "SELECT nombre "
+                                              + "FROM ORD_PRODUCTOS, ORD_DETALLES_PEDIDO, ORD_PEDIDOS "
+                                              + "WHERE ORD_PEDIDOS.codigo = pedido_fk AND "
+                                              + "producto_fk = ORD_PRODUCTOS.codigo "
+                                              + "AND ORD_PEDIDOS.codigo = ?";
+        
+        try{
+            con.setAutoCommit(false);
+            preparedStatement = con.prepareStatement(selectNameFromProducts);
+            preparedStatement.setInt(1, codigoPedido);
+            ResultSet rs = preparedStatement.executeQuery();
+            
+            while(rs.next()){
+                np.add(rs.getString("nombre"));
+            }
+            
+            con.commit();
+        }catch(SQLException e){
+            e.printStackTrace();
+        } finally{
+            if(preparedStatement != null){
+                preparedStatement.close();
+            }
+            
+            if(con != null){
+                preparedStatement.close();
+            }
+            
+            con.setAutoCommit(true);
+        }
+        
         
         return np;
     }
@@ -114,14 +185,51 @@ public class JDBCExample {
      * @param codigoPedido código del pedido cuyo total se calculará
      * @return el costo total del pedido (suma de: cantidades*precios)
      */
-    public static int valorTotalPedido(Connection con, int codigoPedido){
+    public static int valorTotalPedido(Connection con, int codigoPedido) throws SQLException{
         
         //Crear prepared statement
         //asignar parámetros
         //usar executeQuery
         //Sacar resultado del ResultSet
         
-        return 0;
+        int resultado = 0;
+        PreparedStatement preparedStatement = null;
+        
+        String selectValorTotalPedido = "SELECT SUM(cantidad*precio) as valortotal "
+                                              + "FROM ORD_PRODUCTOS, ORD_DETALLES_PEDIDO, ORD_PEDIDOS "
+                                              + "WHERE ORD_PEDIDOS.codigo = pedido_fk AND "
+                                              + "producto_fk = ORD_PRODUCTOS.codigo "
+                                              + "AND ORD_PEDIDOS.codigo = ?";
+        
+        try{
+            con.setAutoCommit(false);
+            preparedStatement = con.prepareStatement(selectValorTotalPedido);
+            preparedStatement.setInt(1, codigoPedido);
+            
+            ResultSet rs = preparedStatement.executeQuery();
+            
+            rs.next();            
+                  
+            resultado = rs.getInt("valortotal");
+
+            
+            con.commit();
+        }catch(SQLException e){
+            e.printStackTrace();
+        } finally{
+            if(preparedStatement != null){
+                preparedStatement.close();
+            }
+            
+            if(con != null){
+                preparedStatement.close();
+            }
+            
+            con.setAutoCommit(true);
+        }
+        
+        
+        return resultado;
     }
     
 
